@@ -8,20 +8,27 @@ Python bindings for [libmodsecurity](https://github.com/owasp-modsecurity/ModSec
 pip install libmodsecurity
 ```
 
+with `uv`:
+
+```sh
+uv venv --python 3.13
+uv add libmodsecurity
+```
+
 ## Usage
 
 ```python
-import libmodsecurity
+from libmodsecurity import ModSecurity, RulesSet
 
-engine = libmodsecurity.ModSecurity()
+engine = ModSecurity()
 engine.set_connector_information("my-app/1.0")
 
-rules = libmodsecurity.RulesSet()
-rules.load(
-    'SecRuleEngine On\n'
-    'SecRule REQUEST_URI "@contains /admin" '
-    '"id:1,phase:1,deny,status:403,log,msg:\'blocked\'"\n'
-)
+rules = RulesSet()
+rules.load("""
+SecRuleEngine On
+SecRule REQUEST_URI "@contains /admin" \
+    "id:1,phase:1,deny,status:403,log,msg:'blocked'"
+""")
 
 with engine.transaction(rules) as t:
     t.process_connection("127.0.0.1", 12345, "127.0.0.1", 80)
