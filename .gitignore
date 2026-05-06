@@ -1,0 +1,12 @@
+build/
+dist/
+wheelhouse/
+vendor/
+*.egg-info/
+__pycache__/
+*.so
+*.pyd
+.venv/
+.pytest_cache/
+_skbuild/
+CMakeUserPresets.json

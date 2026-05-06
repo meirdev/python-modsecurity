@@ -1,0 +1,50 @@
+[build-system]
+requires = ["scikit-build-core>=0.9", "pybind11>=2.12"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "libmodsecurity"
+version = "3.0.15"
+description = "Python bindings for libmodsecurity (OWASP ModSecurity v3)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Meir" }]
+license = { text = "Apache-2.0" }
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C++",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[tool.scikit-build]
+minimum-version = "0.9"
+cmake.version = ">=3.18"
+wheel.packages = ["python/libmodsecurity"]
+build-dir = "build/{wheel_tag}"
+
+[tool.scikit-build.cmake.define]
+CMAKE_BUILD_TYPE = "Release"
+
+[tool.cibuildwheel]
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+skip = ["*-musllinux*", "*-win32", "*i686*", "pp*"]
+build-verbosity = 1
+test-requires = ["pytest"]
+test-command = "pytest {project}/tests"
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
+archs = ["x86_64"]
+before-all = """
+dnf install -y epel-release && \
+dnf install -y --setopt=install_weak_deps=False \
+    libcurl-devel libxml2-devel pcre2-devel zlib-devel openssl-devel yajl-devel \
+    autoconf automake libtool make gcc gcc-c++ git cmake && \
+PREFIX=/opt/modsecurity WORKDIR=/tmp/modsecurity-build bash {project}/scripts/build-libmodsecurity.sh
+"""
+environment = { MODSECURITY_ROOT = "/opt/modsecurity", PKG_CONFIG_PATH = "/opt/modsecurity/lib/pkgconfig:/opt/modsecurity/lib64/pkgconfig", LD_LIBRARY_PATH = "/opt/modsecurity/lib:/opt/modsecurity/lib64" }
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
