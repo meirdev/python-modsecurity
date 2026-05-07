@@ -49,8 +49,13 @@ target_include_directories(_libmodsecurity PRIVATE ${MODSECURITY_INCLUDE_DIR})
 target_link_libraries(_libmodsecurity PRIVATE ${MODSECURITY_LIBRARY})
 
 get_filename_component(MODSECURITY_LIBRARY_DIR ${MODSECURITY_LIBRARY} DIRECTORY)
+if(APPLE)
+    set(_origin_token "@loader_path")
+else()
+    set(_origin_token "$ORIGIN")
+endif()
 set_target_properties(_libmodsecurity PROPERTIES
-    INSTALL_RPATH "$ORIGIN;${MODSECURITY_LIBRARY_DIR}"
+    INSTALL_RPATH "${_origin_token};${MODSECURITY_LIBRARY_DIR}"
     BUILD_WITH_INSTALL_RPATH TRUE
 )
 

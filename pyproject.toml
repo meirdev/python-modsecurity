@@ -29,7 +29,7 @@ build-dir = "build/{wheel_tag}"
 CMAKE_BUILD_TYPE = "Release"
 
 [tool.cibuildwheel]
-build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+build = "cp39-* cp310-* cp311-* cp312-* cp313-* cp314-*"
 skip = ["*-musllinux*", "*-win32", "*i686*", "pp*"]
 build-verbosity = 1
 test-requires = ["pytest"]
@@ -42,9 +42,17 @@ archs = ["x86_64"]
 before-all = """
 dnf install -y epel-release && \
 dnf install -y --setopt=install_weak_deps=False \
-    libcurl-devel libxml2-devel pcre2-devel zlib-devel openssl-devel yajl-devel \
-    autoconf automake libtool make gcc gcc-c++ git cmake && \
+    libxml2-devel zlib-devel openssl-devel \
+    autoconf automake libtool make gcc gcc-c++ git cmake perl && \
 PREFIX=/opt/modsecurity WORKDIR=/tmp/modsecurity-build bash {project}/scripts/build-libmodsecurity.sh
 """
 environment = { MODSECURITY_ROOT = "/opt/modsecurity", PKG_CONFIG_PATH = "/opt/modsecurity/lib/pkgconfig:/opt/modsecurity/lib64/pkgconfig", LD_LIBRARY_PATH = "/opt/modsecurity/lib:/opt/modsecurity/lib64" }
-repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+repair-wheel-command = "auditwheel repair --strip -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.macos]
+archs = ["auto"]
+before-all = """
+brew install autoconf automake libtool pkg-config openssl@3 && \
+PREFIX=/tmp/modsecurity WORKDIR=/tmp/modsecurity-build bash {project}/scripts/build-libmodsecurity.sh
+"""
+environment = { MODSECURITY_ROOT = "/tmp/modsecurity", PKG_CONFIG_PATH = "/tmp/modsecurity/lib/pkgconfig", DYLD_FALLBACK_LIBRARY_PATH = "/tmp/modsecurity/lib", MACOSX_DEPLOYMENT_TARGET = "11.0" }
