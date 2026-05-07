@@ -12,6 +12,15 @@ JOBS="${JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)}"
 mkdir -p "$WORKDIR" "$PREFIX"
 cd "$WORKDIR"
 
+# manylinux ships a custom aclocal at /usr/local/bin/aclocal whose default
+# datadir is /usr/local/share/aclocal — it does NOT see the system's
+# /usr/share/aclocal/pkg.m4. Without this, libmodsecurity's autoreconf can't
+# expand PKG_PROG_PKG_CONFIG and silently builds without YAJL/CURL/LIBXML2.
+# (See https://github.com/pypa/manylinux/issues for the long version.)
+if [ -d /usr/share/aclocal ]; then
+    export ACLOCAL_PATH="/usr/share/aclocal:${ACLOCAL_PATH:-}"
+fi
+
 # macOS only: build OpenSSL from source. Brew's openssl@3 is built for the
 # runner's current OS (e.g. 14.0) and breaks delocate when our wheel targets
 # an older version. On Linux we use the manylinux-provided openssl-devel.
