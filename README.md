@@ -39,3 +39,14 @@ with engine.transaction(rules) as t:
     if it := t.intervention():
         print(f"blocked with {it.status}: {it.log}")
 ```
+
+## ASGI middleware
+
+The package ships a ready-to-use ASGI middleware at `libmodsecurity.asgi`. Point
+it at your application via `WAF_APP` (`module:attr`) and a SecRules config via
+`WAF_RULES`:
+
+```sh
+WAF_APP=app:app WAF_RULES=./config/init.conf \
+uv run gunicorn -k gunicorn.workers.gasgi.ASGIWorker libmodsecurity.asgi:app
+```
