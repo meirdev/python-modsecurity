@@ -5,11 +5,30 @@ PREFIX="${PREFIX:-/opt/modsecurity}"
 MODSEC_VERSION="${MODSEC_VERSION:-v3.0.15}"
 PCRE2_VERSION="${PCRE2_VERSION:-pcre2-10.44}"
 CURL_VERSION="${CURL_VERSION:-curl-8_11_0}"
+OPENSSL_VERSION="${OPENSSL_VERSION:-openssl-3.3.2}"
 WORKDIR="${WORKDIR:-$(pwd)/vendor}"
 JOBS="${JOBS:-$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2)}"
 
 mkdir -p "$WORKDIR" "$PREFIX"
 cd "$WORKDIR"
+
+# macOS only: build OpenSSL from source. Brew's openssl@3 is built for the
+# runner's current OS (e.g. 14.0) and breaks delocate when our wheel targets
+# an older version. On Linux we use the manylinux-provided openssl-devel.
+if [ "$(uname -s)" = "Darwin" ] \
+   && [ ! -f "$PREFIX/lib/libssl.dylib" ]; then
+    echo "==> Building openssl from source (macOS)"
+    if [ ! -d openssl ]; then
+        git clone --depth 1 --branch "$OPENSSL_VERSION" https://github.com/openssl/openssl.git
+    fi
+    (cd openssl && ./config \
+        --prefix="$PREFIX" \
+        --openssldir="$PREFIX/ssl" \
+        --libdir=lib \
+        no-tests no-docs no-apps \
+        shared \
+        && make -j"$JOBS" && make install_sw)
+fi
 
 # Build a minimal libcurl: HTTP/HTTPS only, OpenSSL TLS, zlib. We avoid the
 # default RHEL/AlmaLinux libcurl because its krb5/ldap/ssh/libpsl/libidn2/
@@ -22,10 +41,7 @@ if [ ! -f "$PREFIX/lib/libcurl.so" ] && [ ! -f "$PREFIX/lib64/libcurl.so" ] \
         git clone --depth 1 --branch "$CURL_VERSION" https://github.com/curl/curl.git
     fi
     CURL_TLS_FLAG="--with-openssl"
-    if [ "$(uname -s)" = "Darwin" ] && command -v brew >/dev/null 2>&1; then
-        _ossl="$(brew --prefix openssl@3 2>/dev/null || true)"
-        [ -n "$_ossl" ] && CURL_TLS_FLAG="--with-openssl=$_ossl"
-    fi
+    [ "$(uname -s)" = "Darwin" ] && CURL_TLS_FLAG="--with-openssl=$PREFIX"
     (cd curl && autoreconf -fi && ./configure \
         --prefix="$PREFIX" \
         $CURL_TLS_FLAG \
