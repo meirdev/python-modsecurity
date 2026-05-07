@@ -13,7 +13,9 @@ __version__: str
 __all__: List[str]
 
 class ModSecurity(_ModSecurity):
-    def transaction(self, rules: RulesSet) -> AbstractContextManager[Transaction]:
+    def transaction(
+        self, rules: RulesSet, id: str | None = None
+    ) -> AbstractContextManager[Transaction]:
         """Yield a Transaction and guarantee process_logging() runs on exit.
 
         Use this instead of constructing Transaction directly when audit

@@ -323,6 +323,12 @@ constexpr auto kGetRuleMessagesDoc =
 PYBIND11_MODULE(_libmodsecurity, m) {
     m.doc() = "Python bindings for libmodsecurity (OWASP ModSecurity v3)";
 
+    // Drop py::object callbacks while the interpreter is still alive. Without
+    // this the static registry's destructor runs after Py_Finalize and crashes
+    // with "PyThreadState_Get: GIL held" when releasing the stored callbacks.
+    py::module_::import("atexit").attr("register")(
+        py::cpp_function([]() { log_state_registry().clear(); }));
+
     py::class_<PyRuleMessage>(m, "RuleMessage", kRuleMessageDoc)
         .def_readonly("rule_id", &PyRuleMessage::rule_id,
                       "Numeric rule id (the SecRule `id:N` action).")
@@ -431,13 +437,22 @@ PYBIND11_MODULE(_libmodsecurity, m) {
              kGetParserErrorDoc);
 
     py::class_<ms::Transaction>(m, "Transaction", kTransactionDoc)
-        .def(py::init([](ms::ModSecurity *modsec, ms::RulesSet *rules) {
+        .def(py::init([](ms::ModSecurity *modsec, ms::RulesSet *rules,
+                         std::optional<std::string> id) {
+                 if (id) {
+                     return std::make_unique<ms::Transaction>(
+                         modsec, rules, id->c_str(), modsec);
+                 }
                  return std::make_unique<ms::Transaction>(modsec, rules, modsec);
              }),
              py::arg("modsecurity"),
              py::arg("rules"),
+             py::arg("id") = py::none(),
              py::keep_alive<1, 2>(),
              py::keep_alive<1, 3>())
+        .def_readonly("id", &ms::Transaction::m_id,
+                      "The transaction's unique id. Auto-generated unless an "
+                      "explicit `id` was passed to the constructor.")
         .def("process_connection",
              [](ms::Transaction &t, const std::string &client, int cport,
                 const std::string &server, int sport) {

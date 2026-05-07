@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "libmodsecurity"
-version = "3.0.15"
+version = "3.0.15.post1"
 description = "Python bindings for libmodsecurity (OWASP ModSecurity v3)"
 readme = "README.md"
 requires-python = ">=3.9"

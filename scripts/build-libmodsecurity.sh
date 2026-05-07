@@ -110,6 +110,21 @@ rm -f "$PREFIX"/lib/libpcre2-8.so* "$PREFIX"/lib64/libpcre2-8.so* \
       "$PREFIX"/lib/libyajl.so* "$PREFIX"/lib64/libyajl.so* \
       "$PREFIX"/lib/libyajl.*dylib "$PREFIX"/lib64/libyajl.*dylib 2>/dev/null || true
 
+# yajl quirks: its CMake installs yajl.pc under share/pkgconfig (not the
+# standard lib/pkgconfig that PKG_CONFIG_PATH points at) and names the static
+# lib libyajl_s.a (not libyajl.a, so `-lyajl` from yajl.pc can't find it).
+# Without these two fixups, ModSecurity's configure prints "YAJL library not
+# found" and silently builds without JSON audit-log support.
+mkdir -p "$PREFIX/lib/pkgconfig"
+for _yajl_pc in "$PREFIX/share/pkgconfig/yajl.pc" "$PREFIX/lib64/pkgconfig/yajl.pc"; do
+    [ -f "$_yajl_pc" ] && cp -f "$_yajl_pc" "$PREFIX/lib/pkgconfig/yajl.pc"
+done
+for _libdir in "$PREFIX/lib" "$PREFIX/lib64"; do
+    if [ -f "$_libdir/libyajl_s.a" ] && [ ! -f "$_libdir/libyajl.a" ]; then
+        ln -sf libyajl_s.a "$_libdir/libyajl.a"
+    fi
+done
+
 export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig:$PREFIX/lib64/pkgconfig:${PKG_CONFIG_PATH:-}"
 export LD_LIBRARY_PATH="$PREFIX/lib:$PREFIX/lib64:${LD_LIBRARY_PATH:-}"
 

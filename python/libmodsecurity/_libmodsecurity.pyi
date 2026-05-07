@@ -171,7 +171,16 @@ class Transaction:
     connector to block, redirect, or pause the request.
     """
 
-    def __init__(self, modsecurity: ModSecurity, rules: RulesSet) -> None: ...
+    id: str
+    """The transaction's unique id. Auto-generated unless an explicit `id` was
+    passed to the constructor."""
+
+    def __init__(
+        self,
+        modsecurity: ModSecurity,
+        rules: RulesSet,
+        id: str | None = None,
+    ) -> None: ...
     def process_connection(
         self,
         client_ip: str,
